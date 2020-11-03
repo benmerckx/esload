@@ -34,19 +34,22 @@ exports.esload = function (options) {
         setup: function (build) {
             build.onResolve({ filter: /.*/ }, function (args) {
                 if (args.path.startsWith('!'))
-                    return { path: '!' + args.resolveDir + args.path, namespace: name };
+                    return {
+                        path: '!' + args.resolveDir + args.path,
+                        namespace: options.name
+                    };
                 var file = path_1.default.join(args.resolveDir, args.path);
                 var rule = matchRule(file, options.rules);
                 if (!rule)
                     return;
-                return { path: file, namespace: name };
+                return { path: file, namespace: options.name };
             });
             var loaders = new Map();
             for (var _i = 0, _a = options.rules; _i < _a.length; _i++) {
                 var rule = _a[_i];
                 loaders.set(rule, rule.use);
             }
-            build.onLoad({ filter: /.*/, namespace: name }, function (args) {
+            build.onLoad({ filter: /.*/, namespace: options.name }, function (args) {
                 var file = args.path, matchingLoaders = [];
                 if (file.startsWith('!')) {
                     var parts = file.split('!').filter(function (v) { return v; });
