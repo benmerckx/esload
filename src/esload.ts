@@ -40,17 +40,20 @@ export const esload = (options: {
     setup(build) {
       build.onResolve({filter: /.*/}, args => {
         if (args.path.startsWith('!'))
-          return {path: '!' + args.resolveDir + args.path, namespace: name}
+          return {
+            path: '!' + args.resolveDir + args.path,
+            namespace: options.name
+          }
         const file = path.join(args.resolveDir, args.path)
         const rule = matchRule(file, options.rules)
         if (!rule) return
-        return {path: file, namespace: name}
+        return {path: file, namespace: options.name}
       })
 
       const loaders = new Map<RuleSetRule, Array<string | RuleSetLoader>>()
       for (const rule of options.rules) loaders.set(rule, rule.use)
 
-      build.onLoad({filter: /.*/, namespace: name}, args => {
+      build.onLoad({filter: /.*/, namespace: options.name}, args => {
         let file = args.path,
           matchingLoaders = []
         if (file.startsWith('!')) {
