@@ -12,7 +12,7 @@ const plugin = esload({
   outdir: 'dist',
   // use these as you would use webpack module.rules
   rules: [
-    {test: /\.txt$/, use: 'raw-loader'},
+    {test: /\.txt$/, use: ['raw-loader']},
     {
       test: /\.scss$/,
       use: [

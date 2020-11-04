@@ -11,7 +11,7 @@ var path_1 = __importDefault(require("path"));
 var matchRule = function (file, rules) {
     return rules.find(function (rule) { return rule.test.test(file); });
 };
-// Undocumented internal method that sass-loader relies on
+// Undocumented internal method which for example sass-loader relies on
 var getResolve = function (options) {
     var resolver = enhanced_resolve_1.default.create(options);
     return function (context, request, callback) {
@@ -33,6 +33,8 @@ exports.esload = function (options) {
         name: options.name,
         setup: function (build) {
             build.onResolve({ filter: /.*/ }, function (args) {
+                // We all of treat these "inline" loaders the same for now
+                // https://webpack.js.org/concepts/loaders/#inline
                 var filePath = args.path.startsWith('!!') || args.path.startsWith('-!')
                     ? args.path.substr(1)
                     : args.path;
@@ -102,5 +104,4 @@ exports.esload = function (options) {
         }
     };
 };
-exports.default = exports.esload;
 //# sourceMappingURL=esload.js.map

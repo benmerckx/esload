@@ -9,5 +9,5 @@ export declare const esload: (options: {
     outdir: string;
     rules: Array<Rule>;
 }) => Plugin;
-export default esload;
+export {};
 //# sourceMappingURL=esload.d.ts.map
