@@ -8,18 +8,18 @@ var enhanced_resolve_1 = __importDefault(require("enhanced-resolve"));
 var fs_1 = __importDefault(require("fs"));
 var loader_runner_1 = require("loader-runner");
 var path_1 = __importDefault(require("path"));
-var resolver = enhanced_resolve_1.default.create();
 var matchRule = function (file, rules) {
     return rules.find(function (rule) { return rule.test.test(file); });
 };
 // Undocumented internal method that sass-loader relies on
 var getResolve = function (options) {
+    var resolver = enhanced_resolve_1.default.create(options);
     return function (context, request, callback) {
         if (callback)
-            resolver(context, null, request, null, callback);
+            resolver(context, request, callback);
         else
             return new Promise(function (resolve, reject) {
-                resolver(context, null, request, null, function (err, result) {
+                resolver(context, request, function (err, result) {
                     if (err)
                         reject(err);
                     else
@@ -33,12 +33,15 @@ exports.esload = function (options) {
         name: options.name,
         setup: function (build) {
             build.onResolve({ filter: /.*/ }, function (args) {
-                if (args.path.startsWith('!'))
+                var filePath = args.path.startsWith('!!') || args.path.startsWith('-!')
+                    ? args.path.substr(1)
+                    : args.path;
+                if (filePath.startsWith('!'))
                     return {
-                        path: '!' + args.resolveDir + args.path,
+                        path: '!' + args.resolveDir + filePath,
                         namespace: options.name
                     };
-                var file = path_1.default.join(args.resolveDir, args.path);
+                var file = path_1.default.join(args.resolveDir, filePath);
                 var rule = matchRule(file, options.rules);
                 if (!rule)
                     return;

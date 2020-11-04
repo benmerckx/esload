@@ -5,8 +5,6 @@ import {runLoaders} from 'loader-runner'
 import path from 'path'
 import type {RuleSetLoader, RuleSetRule} from 'webpack'
 
-const resolver = enhancedResolve.create()
-
 type Rule = {
   test: RegExp
   use: Array<string | RuleSetLoader>
@@ -16,13 +14,14 @@ const matchRule = (file: string, rules: Array<Rule>) => {
   return rules.find(rule => rule.test.test(file))
 }
 
-// Undocumented internal method that sass-loader relies on
+// Undocumented internal method which for example sass-loader relies on
 const getResolve = options => {
+  const resolver = enhancedResolve.create(options)
   return (context, request, callback) => {
-    if (callback) resolver(context, null, request, null, callback)
+    if (callback) resolver(context, request, callback)
     else
       return new Promise((resolve, reject) => {
-        resolver(context, null, request, null, (err, result) => {
+        resolver(context, request, (err, result) => {
           if (err) reject(err)
           else resolve(result)
         })
@@ -39,12 +38,18 @@ export const esload = (options: {
     name: options.name,
     setup(build) {
       build.onResolve({filter: /.*/}, args => {
-        if (args.path.startsWith('!'))
+        // We all of treat these "inline" loaders the same for now
+        // https://webpack.js.org/concepts/loaders/#inline
+        const filePath =
+          args.path.startsWith('!!') || args.path.startsWith('-!')
+            ? args.path.substr(1)
+            : args.path
+        if (filePath.startsWith('!'))
           return {
-            path: '!' + args.resolveDir + args.path,
+            path: '!' + args.resolveDir + filePath,
             namespace: options.name
           }
-        const file = path.join(args.resolveDir, args.path)
+        const file = path.join(args.resolveDir, filePath)
         const rule = matchRule(file, options.rules)
         if (!rule) return
         return {path: file, namespace: options.name}
@@ -109,5 +114,3 @@ export const esload = (options: {
     }
   }
 }
-
-export default esload
