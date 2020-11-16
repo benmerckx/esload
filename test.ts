@@ -6,7 +6,7 @@ const plugin = esload({
   outdir: 'bin',
   rules: [
     {
-      test: /\.scss$/,
+      test: /\.(scss|css)$/,
       use: [
         'isomorphic-style-loader',
         {
@@ -35,6 +35,10 @@ const plugin = esload({
           }
         }
       ]
+    },
+    {
+      test: /\.(woff|woff2)$/,
+      use: ['file-loader']
     }
   ]
 })

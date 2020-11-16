@@ -55,11 +55,7 @@ const parsePath = (path: string) => {
     default:
       const loaders = path.substr(type.length).split('!')
       const file = loaders.pop()
-      return {
-        type,
-        file,
-        loaders
-      }
+      return {type, file, loaders}
   }
 }
 
@@ -71,6 +67,10 @@ export const esload = (options: {
   return {
     name: options.name,
     setup(build) {
+      build.onResolve({filter: /\.(js|ts|tsx)$/}, args => {
+        console.log(args)
+      })
+
       for (const [i, rule] of options.rules.entries()) {
         const namespace = `${options.name}-${i}`
         const loader = rule.use
