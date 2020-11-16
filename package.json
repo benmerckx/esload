@@ -12,7 +12,7 @@
 		"@types/loader-runner": "^2.2.3",
 		"@types/webpack": "^4.41.24",
 		"css-loader": "^5.0.0",
-		"esbuild": "^0.8.2",
+		"esbuild": "^0.8.8",
 		"esbuild-node": "^0.4.0",
 		"esbuild-register": "^1.1.0",
 		"esm": "^3.2.25",

@@ -1,14 +1,15 @@
 {
-	"compilerOptions": {
-		"target": "es5",
-		"moduleResolution": "node",
-		"outDir": "dist",
-		"declaration": true,
-		"sourceMap": true,
-		"declarationMap": true,
-		"esModuleInterop": true,
-		"allowSyntheticDefaultImports": true,
-		"skipLibCheck": true
-	},
-	"include": ["src"]
+  "compilerOptions": {
+    "target": "es5",
+    "moduleResolution": "node",
+    "outDir": "dist",
+    "declaration": true,
+    "sourceMap": true,
+    "declarationMap": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "downlevelIteration": true
+  },
+  "include": ["src"]
 }

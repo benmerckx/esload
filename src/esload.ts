@@ -1,6 +1,6 @@
 import enhancedResolve from 'enhanced-resolve'
 import type {Plugin} from 'esbuild'
-import fs from 'fs'
+import {promises as fs, readFile} from 'fs'
 import {runLoaders} from 'loader-runner'
 import path from 'path'
 import type {RuleSetLoader, RuleSetRule} from 'webpack'
@@ -8,10 +8,6 @@ import type {RuleSetLoader, RuleSetRule} from 'webpack'
 type Rule = {
   test: RegExp
   use: Array<string | RuleSetLoader>
-}
-
-const matchRule = (file: string, rules: Array<Rule>) => {
-  return rules.find(rule => rule.test.test(file))
 }
 
 // Undocumented internal method which for example sass-loader relies on
@@ -29,6 +25,44 @@ const getResolve = options => {
   }
 }
 
+/** @see https://webpack.js.org/concepts/loaders/#inline */
+enum PathType {
+  /** No prefix */
+  Normal = '',
+  /** Prefixing with ! will disable all configured normal loaders */
+  DisableNormal = '!',
+  /** Prefixing with !! will disable all configured loaders (preLoaders, loaders, postLoaders) */
+  DisableNormalAndPre = '!!',
+  /** Prefixing with -! will disable all configured preLoaders and loaders but not postLoaders */
+  DisableAll = '-!'
+}
+
+const pathType = (path: string) => {
+  for (const type of [
+    PathType.DisableAll,
+    PathType.DisableNormalAndPre,
+    PathType.DisableNormal
+  ])
+    if (path.startsWith(type)) return type
+  return PathType.Normal
+}
+
+const parsePath = (path: string) => {
+  const type = pathType(path)
+  switch (type) {
+    case PathType.Normal:
+      return {type, file: path, loaders: []}
+    default:
+      const loaders = path.substr(type.length).split('!')
+      const file = loaders.pop()
+      return {
+        type,
+        file,
+        loaders
+      }
+  }
+}
+
 export const esload = (options: {
   name: string
   outdir: string
@@ -37,80 +71,71 @@ export const esload = (options: {
   return {
     name: options.name,
     setup(build) {
-      build.onResolve({filter: /.*/}, args => {
-        // We treat all of these "inline" loaders the same for now
-        // https://webpack.js.org/concepts/loaders/#inline
-        const filePath =
-          args.path.startsWith('!!') || args.path.startsWith('-!')
-            ? args.path.substr(1)
-            : args.path
-        if (filePath.startsWith('!'))
+      for (const [i, rule] of options.rules.entries()) {
+        const namespace = `${options.name}-${i}`
+        const loader = rule.use
+
+        build.onResolve({filter: rule.test}, args => {
+          const {type, loaders, file} = parsePath(args.path)
           return {
-            path: '!' + args.resolveDir + filePath,
-            namespace: options.name
+            namespace,
+            path:
+              type + loaders.concat(path.join(args.resolveDir, file)).join('!')
           }
-        const file = path.join(args.resolveDir, filePath)
-        const rule = matchRule(file, options.rules)
-        if (!rule) return
-        return {path: file, namespace: options.name}
-      })
-
-      const loaders = new Map<RuleSetRule, Array<string | RuleSetLoader>>()
-      for (const rule of options.rules) loaders.set(rule, rule.use)
-
-      build.onLoad({filter: /.*/, namespace: options.name}, args => {
-        let file = args.path,
-          matchingLoaders = []
-        if (file.startsWith('!')) {
-          const parts = file.split('!').filter(v => v)
-          file = path.join(parts.shift(), parts.pop())
-          matchingLoaders = parts
-        } else {
-          const rule = matchRule(file, options.rules)
-          matchingLoaders = loaders.get(rule)
-        }
-        const dir = path.dirname(file)
-        if (matchingLoaders.length === 0)
-          return {contents: fs.readFileSync(file), resolveDir: dir}
-        return new Promise((resolve, reject) => {
-          runLoaders(
-            {
-              resource: file,
-              loaders: matchingLoaders,
-              context: {
-                mode: 'production',
-                rootContext: file,
-                getResolve,
-                emitFile(
-                  name: string,
-                  content: string | Buffer,
-                  sourceMap: {immutable?: boolean; sourceFileName?: string}
-                ) {
-                  fs.writeFileSync(path.join(options.outdir, name), content)
-                }
-              },
-              readResource: fs.readFile.bind(fs)
-            },
-            (error, result) => {
-              if (error) {
-                console.error(error)
-                return resolve({
-                  errors: [
-                    {
-                      text: error.message,
-                      location: {
-                        file: error.path
-                      }
-                    }
-                  ]
-                })
-              }
-              if (!result.result) return resolve(undefined)
-              resolve({contents: result.result[0], resolveDir: dir})
-            }
-          )
         })
-      })
+
+        build.onResolve({filter: /^[-!|!].*/, namespace}, args => {
+          const {file} = parsePath(args.path)
+          return {path: path.join(args.resolveDir, file), namespace: 'file'}
+        })
+
+        build.onLoad({filter: /.*/, namespace}, args => {
+          const {type, loaders, file} = parsePath(args.path)
+          let matchingLoaders = type !== PathType.Normal ? loaders : loader
+          const dir = path.dirname(file)
+          if (matchingLoaders.length === 0)
+            return fs
+              .readFile(file)
+              .then(contents => ({contents, resolveDir: dir}))
+          return new Promise((resolve, reject) => {
+            runLoaders(
+              {
+                resource: file,
+                loaders: matchingLoaders,
+                context: {
+                  mode: 'production',
+                  rootContext: file,
+                  getResolve,
+                  async emitFile(
+                    name: string,
+                    content: string | Buffer,
+                    sourceMap: {immutable?: boolean; sourceFileName?: string}
+                  ) {
+                    await fs.writeFile(path.join(options.outdir, name), content)
+                  }
+                },
+                readResource: readFile
+              },
+              (error, result) => {
+                if (error) {
+                  return resolve({
+                    errors: [
+                      {
+                        text: error.message,
+                        location: {
+                          file: error.path
+                        }
+                      }
+                    ]
+                  })
+                }
+                if (!result.result) return resolve(undefined)
+                resolve({contents: result.result[0], resolveDir: dir})
+              }
+            )
+          })
+        })
+      }
     }
   }
 }
