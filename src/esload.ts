@@ -38,7 +38,7 @@ export const esload = (options: {
     name: options.name,
     setup(build) {
       build.onResolve({filter: /.*/}, args => {
-        // We all of treat these "inline" loaders the same for now
+        // We treat all of these "inline" loaders the same for now
         // https://webpack.js.org/concepts/loaders/#inline
         const filePath =
           args.path.startsWith('!!') || args.path.startsWith('-!')

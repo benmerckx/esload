@@ -24,7 +24,7 @@ const plugin = esload({
         'sass-loader'
       ]
     },
-    {test: /.jpg$/, use: ['file-loader']}
+    {test: /\.jpg$/, use: ['file-loader']}
     // ...
   ]
 })
