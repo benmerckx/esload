@@ -130,11 +130,7 @@ var parsePath = function (path) {
         default:
             var loaders = path.substr(type.length).split('!');
             var file = loaders.pop();
-            return {
-                type: type,
-                file: file,
-                loaders: loaders
-            };
+            return { type: type, file: file, loaders: loaders };
     }
 };
 exports.esload = function (options) {

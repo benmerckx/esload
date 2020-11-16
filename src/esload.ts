@@ -67,10 +67,6 @@ export const esload = (options: {
   return {
     name: options.name,
     setup(build) {
-      build.onResolve({filter: /\.(js|ts|tsx)$/}, args => {
-        console.log(args)
-      })
-
       for (const [i, rule] of options.rules.entries()) {
         const namespace = `${options.name}-${i}`
         const loader = rule.use
